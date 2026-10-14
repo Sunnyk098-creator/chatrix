@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f0f6ff">
+<meta name="description" content="Chatrix — Your space, your people. Ultra-fast private messaging with E2E encryption and custom VIP identities.">
+<title>Chatrix — Your Space, Your People</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace']
+      },
+      colors: {
+        brand: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          400: '#60a5fa',
+          500: '#2563eb',
+          600: '#1d4ed8',
+          700: '#1e40af',
+          900: '#0f172a'
+        }
+      }
+    }
+  }
+};
+</script>
+
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --blue: #2563eb;
+  --blue-glow: rgba(37, 99, 235, 0.35);
+  --ink: #090e1a;
+  --muted: #64748b;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  color: var(--ink);
+  background: #f8fbff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+#world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.site { position: relative; z-index: 1; }
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(59, 130, 246, 0.16), transparent 45%),
+    radial-gradient(circle at 90% 40%, rgba(99, 102, 241, 0.12), transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(6, 182, 212, 0.10), transparent 50%),
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 50%, #f4f8fe 100%);
+}
+
+.grid-bg {
+  position: absolute;
+  inset: 0;
+  opacity: .35;
+  background-image:
+    linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 30%, black 50%, transparent 85%);
+}
+
+#scrollProgress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 3.5px;
+  z-index: 1000;
+  background: linear-gradient(90deg, #2563eb, #6366f1, #06b6d4);
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.8);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 15px 35px -5px rgba(27, 57, 113, 0.06);
+  backdrop-filter: blur(16px);
+  transition: all .35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-6px);
+  border-color: #bfdbfe;
+  box-shadow: 0 25px 60px -10px rgba(37, 99, 235, 0.16);
+}
+
+.gradient-text {
+  background: linear-gradient(115deg, #1d4ed8 0%, #2563eb 40%, #7c3aed 80%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-heading {
+  font-size: clamp(3rem, 7.5vw, 6.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.06em;
+  font-weight: 900;
+}
+
+.nav-glass {
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Premium Buttons */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.32);
+  transition: transform .25s, box-shadow .25s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 20px 42px rgba(37, 99, 235, 0.45);
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  top: -100%;
+  left: -80%;
+  width: 50%;
+  height: 300%;
+  transform: rotate(25deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+  transition: left .75s ease;
+  pointer-events: none;
+}
+.btn-primary:hover::after { left: 150%; }
+
+.btn-web {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid #dbeafe;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+  transition: all .25s ease;
+}
+
+.btn-web:hover {
+  transform: translateY(-3px);
+  background: #ffffff;
+  border-color: #60a5fa;
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.18);
+}
+
+/* 3D Phone Showcase */
+.phone-scene {
+  perspective: 1400px;
+  position: relative;
+  min-height: 590px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.phone {
+  width: 275px;
+  height: 550px;
+  border-radius: 42px;
+  background: #fff;
+  border: 7px solid #0f172a;
+  box-shadow: 0 35px 90px -15px rgba(30, 59, 120, 0.28), 0 0 45px rgba(37, 99, 235, 0.12);
+  overflow: hidden;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.phone::before {
+  content: "";
+  position: absolute;
+  z-index: 30;
+  width: 82px;
+  height: 19px;
+  border-radius: 20px;
+  background: #0f172a;
+  top: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.phone-front {
+  z-index: 3;
+  transform: translateX(38px) rotateY(-8deg) rotateZ(2deg);
+  animation: phoneFloat 6s ease-in-out infinite;
+}
+
+.phone-back {
+  position: absolute;
+  transform: translateX(-88px) translateY(24px) rotateY(14deg) rotateZ(-6deg) scale(.92);
+  opacity: .82;
+  filter: saturate(.88);
+}
+
+@keyframes phoneFloat {
+  0%, 100% { transform: translateX(38px) rotateY(-8deg) rotateZ(2deg) translateY(0); }
+  50% { transform: translateX(38px) rotateY(-8deg) rotateZ(2deg) translateY(-14px); }
+}
+
+.chat-bubble {
+  padding: 10px 13px;
+  border-radius: 17px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.incoming {
+  background: #f1f5f9;
+  border-bottom-left-radius: 4px;
+}
+
+.outgoing {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+
+/* Floating interactive badges */
+.floating-badge {
+  position: absolute;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 20px 45px rgba(37, 99, 235, 0.14);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  animation: badgeFloat 5s ease-in-out infinite;
+}
+
+@keyframes badgeFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Scroll Animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity .8s ease, transform .8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Marquee Pill */
+.marquee-wrap {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
+}
+
+.marquee {
+  width: max-content;
+  display: flex;
+  gap: 16px;
+  animation: marquee 30s linear infinite;
+}
+.marquee:hover { animation-play-state: paused; }
+
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+.marquee-pill {
+  white-space: nowrap;
+  border: 1.5px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.85);
+  color: #334155;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+/* CTA Card */
+.cta-box {
+  background:
+    radial-gradient(circle at 90% 15%, rgba(96, 165, 250, 0.4), transparent 45%),
+    radial-gradient(circle at 10% 85%, rgba(99, 102, 241, 0.35), transparent 45%),
+    linear-gradient(135deg, #09132b, #152754 60%, #1e3a8a);
+}
+
+@media (max-width: 640px) {
+  .phone-scene { min-height: 480px; transform: scale(.82); margin: -30px 0; }
+  .phone { width: 250px; height: 500px; }
+  .phone-back { transform: translateX(-50px) translateY(12px) rotateY(12deg) scale(.9); }
+  .phone-front { transform: translateX(30px) rotateY(-8deg); }
+}
+</style>
+</head>
+
+<body>
+<div class="ambient" aria-hidden="true"><div class="grid-bg"></div></div>
+<div id="scrollProgress" aria-hidden="true"></div>
+<canvas id="world" aria-hidden="true"></canvas>
+
+<div class="site">
+
+<!-- ========================================== -->
+<!-- NAVIGATION BAR                            -->
+<!-- ========================================== -->
+<nav class="nav-glass fixed top-0 inset-x-0 z-50 transition-all duration-300" id="mainNav">
+  <div class="max-w-7xl mx-auto px-5 sm:px-8 h-[74px] flex items-center justify-between">
+    <!-- Brand Logo -->
+    <a href="#home" class="flex items-center gap-2.5">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+        <i class="fa-solid fa-comment-dots text-lg"></i>
+      </div>
+      <span class="text-xl font-black tracking-tight text-slate-900">Chatrix<span class="text-blue-600">.</span></span>
+    </a>
+
+    <!-- Menu Links -->
+    <div class="hidden md:flex items-center gap-8 text-sm font-bold text-slate-600">
+      <a href="#features" class="hover:text-blue-600 transition">Features</a>
+      <a href="#experience" class="hover:text-blue-600 transition">Preview</a>
+      <a href="#security" class="hover:text-blue-600 transition">Privacy</a>
+    </div>
+
+    <!-- Dual Actions: Web Version + Download -->
+    <div class="flex items-center gap-2.5">
+      <!-- Web Version Button -->
+      <a href="https://chatrix-web.vercel.app" target="_blank" rel="noopener noreferrer" 
+         class="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition">
+        <i class="fa-solid fa-globe text-sm text-blue-600"></i> Open Web
+      </a>
+
+      <!-- APK Direct Download -->
+      <a href="Chatrix v1.apk" download="Chatrix v1.apk"
+         class="btn-primary text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 shadow-md">
+        <i class="fa-solid fa-download"></i> Get APK
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+<!-- ========================================== -->
+<!-- HERO SECTION                               -->
+<!-- ========================================== -->
+<section id="home" class="relative pt-36 sm:pt-48 pb-16 sm:pb-24 px-5 overflow-hidden">
+  <div class="max-w-5xl mx-auto text-center relative z-10">
+
+    <!-- Status Pill -->
+    <div class="reveal inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-xs font-bold text-slate-700 mb-8 border border-white/80 shadow-sm">
+      <span class="flex h-2 w-2 rounded-full bg-blue-600 animate-ping"></span>
+      <span class="text-blue-600 font-extrabold">Chatrix v1.0 Live</span> • Private & Fast Messaging
+    </div>
+
+    <!-- Main Title -->
+    <h1 class="hero-heading reveal text-slate-950">
+      Your space.<br><span class="gradient-text">Your people.</span>
+    </h1>
+
+    <p class="reveal max-w-2xl mx-auto mt-6 text-base sm:text-xl leading-relaxed text-slate-600 font-medium">
+      End-to-end encrypted conversations, customizable VIP profile gradients, 512px sticker studio, and 24h stories with zero logs.
+    </p>
+
+    <!-- ACTION BUTTONS: APK DOWNLOAD + WEB VERSION -->
+    <div id="download" class="reveal mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+      
+      <!-- Primary: Download APK directly -->
+      <a href="Chatrix v1.apk" download="Chatrix v1.apk" 
+         class="btn-primary w-full sm:w-auto flex items-center justify-center gap-3.5 text-white px-7 py-4 rounded-2xl font-bold">
+        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+          <i class="fa-brands fa-android text-xl text-white"></i>
+        </div>
+        <div class="text-left">
+          <span class="block text-[10px] uppercase font-extrabold tracking-wider text-blue-100">Android Direct APK</span>
+          <span class="block text-base leading-tight font-black">Download Chatrix v1.apk</span>
+        </div>
+        <i class="fa-solid fa-download ml-2 text-sm"></i>
+      </a>
+
+      <!-- Secondary: Open Web Client directly -->
+      <a href="https://chatrix-web.vercel.app" target="_blank" rel="noopener noreferrer" 
+         class="btn-web w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-4 rounded-2xl font-bold text-slate-800">
+        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <i class="fa-solid fa-globe text-lg"></i>
+        </div>
+        <div class="text-left">
+          <span class="block text-[10px] uppercase font-extrabold tracking-wider text-slate-400">Browser Client</span>
+          <span class="block text-base leading-tight font-extrabold">Open Web Version</span>
+        </div>
+        <i class="fa-solid fa-arrow-up-right-from-square text-xs ml-2 text-blue-500"></i>
+      </a>
+    </div>
+
+    <!-- Small Note -->
+    <p class="reveal mt-5 text-xs text-slate-400 font-semibold flex items-center justify-center gap-3">
+      <span><i class="fa-solid fa-shield-halved text-emerald-500"></i> Safe & Clean APK</span>
+      <span>•</span>
+      <span><i class="fa-solid fa-bolt text-amber-500"></i> Instant Web Access</span>
+    </p>
+  </div>
+</section>
+
+<!-- ========================================== -->
+<!-- 3D INTERACTIVE PHONE SHOWCASE              -->
+<!-- ========================================== -->
+<section id="experience" class="px-5 pb-20 sm:pb-32">
+<div class="max-w-6xl mx-auto">
+  <div class="phone-scene" id="phoneScene">
+
+    <!-- Phone 1 (Back Preview: Profiles & People) -->
+    <div class="phone phone-back" aria-hidden="true">
+      <div class="h-full pt-8 px-4 bg-white flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <span class="text-[10px] font-black text-blue-600 uppercase tracking-wider">YOUR CIRCLE</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          </div>
+          <div class="space-y-4 pt-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white font-black flex items-center justify-center text-xs">S</div>
+              <div class="flex-1">
+                <p class="text-xs font-black text-slate-900 flex items-center gap-1">Sunny <i class="fa-solid fa-check-circle text-blue-500 text-[10px]"></i></p>
+                <p class="text-[10px] text-emerald-500 font-bold">online</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-500 text-white font-black flex items-center justify-center text-xs">A</div>
+              <div class="flex-1">
+                <p class="text-xs font-black text-slate-900">Alex Morgan</p>
+                <p class="text-[10px] text-slate-400">Last seen 2:10 PM</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 text-white font-black flex items-center justify-center text-xs">M</div>
+              <div class="flex-1">
+                <p class="text-xs font-black text-slate-900">Mia Taylor</p>
+                <p class="text-[10px] text-slate-400">Last seen yesterday</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 bg-blue-50 rounded-2xl mb-4 text-center">
+          <p class="text-[11px] font-extrabold text-blue-900">🔒 Zero Logs Architecture</p>
+          <p class="text-[9px] text-blue-600 mt-0.5">Real-time encrypted connection</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone 2 (Front Preview: Active Chat Screen) -->
+    <div class="phone phone-front" id="heroPhone">
+      <div class="h-full pt-8 flex flex-col justify-between bg-white text-slate-900">
+        
+        <!-- App Chat Header -->
+        <div class="px-4 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-md">S</div>
+            <div>
+              <h4 class="font-black text-xs leading-tight flex items-center gap-1">Sunny <i class="fa-solid fa-check-circle text-blue-500 text-[10px]"></i></h4>
+              <p class="text-[9px] text-emerald-500 font-bold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> online</p>
+            </div>
+          </div>
+          <div class="flex gap-2 text-slate-400 text-xs">
+            <i class="fa-solid fa-phone"></i>
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </div>
+        </div>
+
+        <!-- Chat Messages with E2E Notice -->
+        <div class="p-3 space-y-2.5 flex-1 flex flex-col justify-end bg-slate-50/60 overflow-hidden text-left">
+          
+          <!-- Yellow Encrypted Banner -->
+          <div class="bg-[#FFF8DD] text-[#856404] text-[8px] font-bold p-2 rounded-xl border border-[#FFEeba] text-center flex items-center gap-1.5">
+            <i class="fa-solid fa-lock text-[7px] shrink-0"></i>
+            <span>Messages & calls are end-to-end encrypted.</span>
+          </div>
+
+          <div class="chat-bubble incoming">
+            <p class="font-medium text-slate-800">Hi! Are we chatting on Chatrix? 👀</p>
+            <span class="text-[8px] text-slate-400 block text-right mt-0.5">2:08 PM</span>
+          </div>
+
+          <div class="chat-bubble outgoing">
+            <p class="font-medium">Yes! Super fast & 100% encrypted 🛡️</p>
+            <div class="flex items-center justify-end gap-1 text-[8px] opacity-90 mt-0.5">
+              <span>2:09 PM</span>
+              <i class="fa-solid fa-check-double text-sky-200"></i>
+            </div>
+          </div>
+
+          <!-- Typing Indicator -->
+          <div class="chat-bubble incoming w-max py-2 px-3">
+            <div class="typing-dots flex gap-1">
+              <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
+              <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
+              <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="p-2 bg-white border-t border-slate-100 flex items-center gap-2">
+          <div class="flex-1 bg-slate-100 rounded-full px-3 py-1.5 flex items-center gap-2">
+            <i class="fa-solid fa-plus text-slate-400 text-xs"></i>
+            <i class="fa-solid fa-icons text-pink-500 text-xs"></i>
+            <span class="text-[11px] text-slate-400">Message...</span>
+          </div>
+          <div class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
+            <i class="fa-solid fa-microphone"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Badge 1 (Left) -->
+    <div class="floating-badge px-4 py-3 left-0 sm:left-4 top-20 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg shadow-sm">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <p class="text-xs font-black text-slate-900">E2E Encrypted</p>
+        <p class="text-[10px] text-slate-500 font-semibold">Zero logs, total privacy</p>
+      </div>
+    </div>
+
+    <!-- Floating Badge 2 (Right) -->
+    <div class="floating-badge px-4 py-3 right-0 sm:right-6 bottom-20 flex items-center gap-3" style="animation-delay: -2.5s;">
+      <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg shadow-sm">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+      <div>
+        <p class="text-xs font-black text-slate-900">VIP Identity</p>
+        <p class="text-[10px] text-slate-500 font-semibold">Custom badges & themes</p>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ========================================== -->
+<!-- LIVE STATS BANNER                          -->
+<!-- ========================================== -->
+<section class="py-12 border-y border-slate-200/80 bg-white/70 backdrop-blur-md px-5">
+  <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+    <div>
+      <h3 class="text-3xl sm:text-4xl font-black text-blue-600 stat-counter" data-target="100">0</h3>
+      <p class="text-xs sm:text-sm font-bold text-slate-500 mt-1">% End-to-End Encrypted</p>
+    </div>
+    <div>
+      <h3 class="text-3xl sm:text-4xl font-black text-slate-900 stat-counter" data-target="0">0</h3>
+      <p class="text-xs sm:text-sm font-bold text-slate-500 mt-1">Zero Server Logs</p>
+    </div>
+    <div>
+      <h3 class="text-3xl sm:text-4xl font-black text-purple-600 stat-counter" data-target="512">0</h3>
+      <p class="text-xs sm:text-sm font-bold text-slate-500 mt-1">PX HD Sticker Studio</p>
+    </div>
+    <div>
+      <h3 class="text-3xl sm:text-4xl font-black text-emerald-600 stat-counter" data-target="99">0</h3>
+      <p class="text-xs sm:text-sm font-bold text-slate-500 mt-1">% Realtime Uptime</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================== -->
+<!-- RUNNING FEATURE STRIP                      -->
+<!-- ========================================== -->
+<section class="py-6 overflow-hidden bg-slate-50/50">
+  <div class="marquee-wrap">
+    <div class="marquee">
+      <span class="marquee-pill"><i class="fa-solid fa-lock text-blue-600 mr-2"></i>E2E Encrypted Chats</span>
+      <span class="marquee-pill"><i class="fa-solid fa-palette text-amber-500 mr-2"></i>Dual Gradient Profiles</span>
+      <span class="marquee-pill"><i class="fa-solid fa-icons text-pink-500 mr-2"></i>512px Sticker Studio</span>
+      <span class="marquee-pill"><i class="fa-solid fa-circle-notch text-cyan-500 mr-2"></i>24h Photo Stories</span>
+      <span class="marquee-pill"><i class="fa-solid fa-users text-indigo-500 mr-2"></i>Community Groups</span>
+      <span class="marquee-pill"><i class="fa-solid fa-shield-halved text-emerald-500 mr-2"></i>Anti-Bypass Security</span>
+      <span class="marquee-pill"><i class="fa-solid fa-lock text-blue-600 mr-2"></i>E2E Encrypted Chats</span>
+      <span class="marquee-pill"><i class="fa-solid fa-palette text-amber-500 mr-2"></i>Dual Gradient Profiles</span>
+      <span class="marquee-pill"><i class="fa-solid fa-icons text-pink-500 mr-2"></i>512px Sticker Studio</span>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================== -->
+<!-- FEATURES GRID                              -->
+<!-- ========================================== -->
+<section id="features" class="py-24 sm:py-32 px-5">
+<div class="max-w-6xl mx-auto">
+  <div class="max-w-2xl mx-auto text-center reveal">
+    <span class="text-blue-600 text-xs font-black uppercase tracking-widest bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+      Cutting-Edge Messaging
+    </span>
+    <h2 class="text-3xl sm:text-5xl font-black tracking-tight text-slate-950 mt-4 leading-tight">
+      Engineered for speed.<br><span class="gradient-text">Designed for you.</span>
+    </h2>
+    <p class="text-slate-500 mt-4 font-medium leading-relaxed">
+      Everything you need in a modern messenger without the bloat, tracking, or invasive ads.
+    </p>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-6 mt-16">
+    
+    <!-- Feature 1 -->
+    <article class="glass-card rounded-3xl p-8 reveal">
+      <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl mb-6 shadow-sm">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h3 class="font-black text-xl text-slate-900">Encrypted Real-Time Chat</h3>
+      <p class="text-sm text-slate-500 mt-3 font-medium leading-relaxed">
+        Military-grade cipher payload encryption. Real-time message ticks, typing indicators, and instant audio notes.
+      </p>
+      <div class="mt-6 flex items-center gap-1.5 text-xs font-bold text-blue-600">
+        <span>Protected transit</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </div>
+    </article>
+
+    <!-- Feature 2 -->
+    <article class="glass-card rounded-3xl p-8 reveal">
+      <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl mb-6 shadow-sm">
+        <i class="fa-solid fa-palette"></i>
+      </div>
+      <h3 class="font-black text-xl text-slate-900">Custom VIP Identity</h3>
+      <p class="text-sm text-slate-500 mt-3 font-medium leading-relaxed">
+        Single solid color or smooth dual gradients. Custom verified tick colors (Gold, Emerald, Sky, Rose) visible to all users.
+      </p>
+      <div class="mt-6 flex items-center gap-1.5 text-xs font-bold text-amber-600">
+        <span>Personalize style</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </div>
+    </article>
+
+    <!-- Feature 3 -->
+    <article class="glass-card rounded-3xl p-8 reveal">
+      <div class="w-14 h-14 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center text-2xl mb-6 shadow-sm">
+        <i class="fa-solid fa-icons"></i>
+      </div>
+      <h3 class="font-black text-xl text-slate-900">512px Sticker Studio</h3>
+      <p class="text-sm text-slate-500 mt-3 font-medium leading-relaxed">
+        Draw transparent stickers with precision brush tools or import animated GIFs up to 5MB. 4×4 quick keyboard tray.
+      </p>
+      <div class="mt-6 flex items-center gap-1.5 text-xs font-bold text-pink-600">
+        <span>Create packs</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </div>
+    </article>
+  </div>
+</div>
+</section>
+
+<!-- ========================================== -->
+<!-- DUAL ACCESS BANNER (APK + WEB)             -->
+<!-- ========================================== -->
+<section id="security" class="px-5 pb-24">
+<div class="cta-box relative max-w-6xl mx-auto rounded-[36px] overflow-hidden p-8 sm:p-14 lg:p-16 text-white shadow-2xl">
+  <div class="relative max-w-2xl reveal z-10">
+    
+    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3.5 py-1.5 text-xs font-black text-blue-200 mb-6">
+      <i class="fa-solid fa-rocket text-amber-400"></i> START MESSAGING IN SECONDS
+    </span>
+
+    <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+      Ready to step into<br>the private circle?
+    </h2>
+
+    <p class="text-blue-100/80 mt-5 font-medium leading-relaxed">
+      Download the standalone Android APK or launch the browser client directly on any device without installation.
+    </p>
+
+    <!-- DUAL CALL TO ACTION -->
+    <div class="flex flex-col sm:flex-row gap-4 mt-8">
+      
+      <!-- Direct Download APK -->
+      <a href="Chatrix v1.apk" download="Chatrix v1.apk"
+         class="inline-flex items-center justify-center gap-3 rounded-2xl bg-white text-slate-950 font-black px-7 py-4 hover:bg-blue-50 transition shadow-xl">
+        <i class="fa-brands fa-android text-2xl text-blue-600"></i>
+        <div class="text-left">
+          <span class="block text-[9px] uppercase tracking-wider text-slate-500">Free Download</span>
+          <span class="block text-sm font-black">Chatrix v1.apk</span>
+        </div>
+      </a>
+
+      <!-- Open Web Version -->
+      <a href="https://chatrix-web.vercel.app" target="_blank" rel="noopener noreferrer"
+         class="inline-flex items-center justify-center gap-3 rounded-2xl bg-white/10 border border-white/20 text-white font-black px-7 py-4 hover:bg-white/20 transition backdrop-blur-md shadow-xl">
+        <i class="fa-solid fa-globe text-xl text-cyan-300"></i>
+        <div class="text-left">
+          <span class="block text-[9px] uppercase tracking-wider text-blue-200">Instant Access</span>
+          <span class="block text-sm font-black">Open Web Client</span>
+        </div>
+        <i class="fa-solid fa-arrow-up-right-from-square text-xs ml-1 opacity-70"></i>
+      </a>
+    </div>
+
+  </div>
+</div>
+</section>
+
+</main>
+
+<!-- ========================================== -->
+<!-- FOOTER                                     -->
+<!-- ========================================== -->
+<footer class="border-t border-slate-200 bg-white/80 backdrop-blur-md px-5 pt-10 pb-8">
+<div class="max-w-6xl mx-auto">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+    <a href="#home" class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
+        <i class="fa-solid fa-comment-dots text-sm"></i>
+      </div>
+      <div>
+        <span class="font-black text-lg text-slate-950">Chatrix<span class="text-blue-600">.</span></span>
+        <p class="text-[11px] text-slate-400 font-medium">Your space. Your people.</p>
+      </div>
+    </a>
+
+    <div class="flex flex-wrap items-center gap-6 text-xs font-bold text-slate-600">
+      <a href="https://chatrix-web.vercel.app" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 transition flex items-center gap-1">
+        Web App <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+      </a>
+      <a href="Chatrix v1.apk" download="Chatrix v1.apk" class="hover:text-blue-600 transition flex items-center gap-1">
+        Android APK <i class="fa-solid fa-download text-[9px]"></i>
+      </a>
+      <a href="https://t.me/syroxzen" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 transition flex items-center gap-1">
+        Support <i class="fa-solid fa-paper-plane text-[9px]"></i>
+      </a>
+    </div>
+  </div>
+
+  <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between gap-3 text-xs text-slate-400 font-medium">
+    <p>© <span id="year"></span> Chatrix. All rights reserved.</p>
+    <p>Engineered with <span class="text-red-500">♥</span> for uncensored private communication.</p>
+  </div>
+</div>
+</footer>
+</div>
+
+<!-- ========================================== -->
+<!-- THREE.JS INTERACTIVE LIGHT BACKGROUND     -->
+<!-- ========================================== -->
+<script>
+(() => {
+  // Current Year
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Scroll Reveal Animations
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => observer.observe(el));
+
+  // Scroll Progress Bar
+  const progressBar = document.getElementById('scrollProgress');
+  window.addEventListener('scroll', () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = max > 0 ? (window.scrollY / max) * 100 : 0;
+    progressBar.style.width = progress + '%';
+  }, { passive: true });
+
+  // Number Counter Animation
+  const counters = document.querySelectorAll('.stat-counter');
+  let counted = false;
+  window.addEventListener('scroll', () => {
+    if (counted) return;
+    const top = document.querySelector('.stat-counter')?.getBoundingClientRect().top;
+    if (top && top < window.innerHeight - 80) {
+      counted = true;
+      counters.forEach(counter => {
+        const target = +counter.getAttribute('data-target');
+        let count = 0;
+        const speed = target / 35;
+        const update = () => {
+          count += speed;
+          if (count < target) {
+            counter.innerText = Math.ceil(count);
+            requestAnimationFrame(update);
+          } else {
+            counter.innerText = target;
+          }
+        };
+        update();
+      });
+    }
+  }, { passive: true });
+
+  // Interactive Three.js Light Ambient World
+  (() => {
+    const canvas = document.getElementById('world');
+    if (!canvas || !window.THREE) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.z = 18;
+
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
+    } catch(e) {
+      canvas.style.display = 'none';
+      return;
+    }
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Floating Particles
+    const isMobile = window.innerWidth < 768;
+    const count = isMobile ? 80 : 180;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i++) {
+      pos[i] = (Math.random() - 0.5) * 36;
+    }
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x3b82f6, size: isMobile ? 0.08 : 0.1, transparent: true, opacity: 0.5 });
+    const points = new THREE.Points(geom, mat);
+    scene.add(points);
+
+    // Iridescent Rings
+    const rings = [];
+    const ringCount = isMobile ? 3 : 6;
+    for (let i = 0; i < ringCount; i++) {
+      const ringGeom = new THREE.TorusGeometry(1.2 + (i % 3) * 0.4, 0.015, 8, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: i % 2 ? 0x2563eb : 0x6366f1,
+        transparent: true,
+        opacity: 0.22
+      });
+      const ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.position.set((Math.random() - 0.5) * 24, (Math.random() - 0.5) * 16, -2 - Math.random() * 6);
+      ring.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+      scene.add(ring);
+      rings.push(ring);
+    }
+
+    let mouseX = 0, mouseY = 0;
+    if (!isMobile) {
+      window.addEventListener('pointermove', (e) => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 1.5;
+        mouseY = (e.clientY / window.innerHeight - 0.5) * 1.5;
+      }, { passive: true });
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    let time = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.005;
+      points.rotation.y += 0.0004;
+
+      rings.forEach((ring, idx) => {
+        ring.rotation.x += 0.001;
+        ring.rotation.y += 0.0015;
+        ring.position.y += Math.sin(time + idx) * 0.002;
+      });
+
+      scene.rotation.y += (mouseX * 0.03 - scene.rotation.y) * 0.02;
+      scene.rotation.x += (mouseY * 0.03 - scene.rotation.x) * 0.02;
+      renderer.render(scene, camera);
+    }
+    animate();
+  })();
+
+  // 3D Phone Hover Tilt
+  const sceneEl = document.getElementById('phoneScene');
+  const phoneEl = document.getElementById('heroPhone');
+  if (sceneEl && phoneEl && window.innerWidth > 768) {
+    sceneEl.addEventListener('pointermove', (e) => {
+      const rect = sceneEl.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      phoneEl.style.transform = `translateX(38px) rotateY(${-8 + x * 10}deg) rotateX(${-y * 8}deg) rotateZ(2deg)`;
+    });
+    sceneEl.addEventListener('pointerleave', () => {
+      phoneEl.style.transform = '';
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
